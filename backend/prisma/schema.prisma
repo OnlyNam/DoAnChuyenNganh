@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 1. ENUMS (Định nghĩa các tập giá trị cố định)
+// ==========================================
+
+enum SystemRole {
+  STUDENT
+  LECTURER
+  ADMIN
+}
+
+enum ProjectRole {
+  LEADER
+  MEMBER
+  ADVISOR
+}
+
+enum ProjectTemplate {
+  CAPSTONE_9W   // Đồ án chuyên ngành / tốt nghiệp 9 tuần
+  COURSE_15W    // Bài tập lớn môn học 15 tuần
+  SCRUM_BASIC   // Mẫu Scrum tự do
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum SprintStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+enum IssueType {
+  STORY
+  TASK
+  BUG
+  REPORT        // Loại công việc đặc thù: Viết báo cáo / Tài liệu đồ án
+}
+
+enum IssueStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum IssuePriority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum MilestoneStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+// ==========================================
+// 2. MODELS (Các bảng dữ liệu cốt lõi)
+// ==========================================
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  fullName     String     @map("full_name")
+  studentCode  String?    @unique @map("student_code") // MSSV (Null nếu là Giảng viên)
+  avatarUrl    String?    @map("avatar_url")
+  systemRole   SystemRole @default(STUDENT) @map("system_role")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Quan hệ
+  ownedProjects      Project[]         @relation("ProjectOwner")
+  advisedProjects    Project[]         @relation("ProjectAdvisor")
+  memberships        ProjectMember[]
+  assignedIssues     Issue[]           @relation("IssueAssignee")
+  reportedIssues     Issue[]           @relation("IssueReporter")
+  comments           IssueComment[]
+  attachments        IssueAttachment[]
+  activityLogs       ActivityLog[]
+  evaluationsGiven   PeerEvaluation[]  @relation("EvaluationReviewer")
+  evaluationsReceived PeerEvaluation[] @relation("EvaluationReviewee")
+
+  @@map("users")
+}
+
+model Project {
+  id           String          @id @default(uuid())
+  key          String          @unique // Ví dụ: "DA01", "CNPM02"
+  name         String
+  description  String?         @db.Text
+  semester     String          // Ví dụ: "HK1 2026-2027"
+  templateType ProjectTemplate @default(CAPSTONE_9W) @map("template_type")
+  status       ProjectStatus   @default(ACTIVE)
+  issueCounter Int             @default(0) @map("issue_counter") // Đếm tự tăng để sinh mã DA01-1, DA01-2
+
+  ownerId      String          @map("owner_id")
+  advisorId    String?         @map("advisor_id")
+  startDate    DateTime        @map("start_date")
+  endDate      DateTime        @map("end_date")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  // Quan hệ
+  owner           User             @relation("ProjectOwner", fields: [ownerId], references: [id])
+  advisor         User?            @relation("ProjectAdvisor", fields: [advisorId], references: [id])
+  members         ProjectMember[]
+  epics           Epic[]
+  sprints         Sprint[]
+  issues          Issue[]
+  milestones      Milestone[]
+  peerEvaluations PeerEvaluation[]
+  activityLogs    ActivityLog[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String      @map("project_id")
+  userId    String      @map("user_id")
+  role      ProjectRole @default(MEMBER)
+  joinedAt  DateTime    @default(now()) @map("joined_at")
+
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Epic {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  title       String
+  description String?   @db.Text
+  color       String    @default("#3B82F6") // Mã màu hiển thị trên thẻ Kanban
+  startDate   DateTime? @map("start_date")
+  dueDate     DateTime? @map("due_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+
+  @@map("epics")
+}
+
+model Sprint {
+  id        String       @id @default(uuid())
+  projectId String       @map("project_id")
+  name      String       // Ví dụ: "Sprint 1 - Phân tích & Thiết kế"
+  goal      String?      @db.Text
+  status    SprintStatus @default(PLANNED)
+  startDate DateTime?    @map("start_date")
+  endDate   DateTime?    @map("end_date")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues          Issue[]
+  milestones      Milestone[]
+  peerEvaluations PeerEvaluation[]
+
+  @@map("sprints")
+}
+
+model Issue {
+  id          String        @id @default(uuid())
+  projectId   String        @map("project_id")
+  sprintId    String?       @map("sprint_id") // Null = Đang nằm trong Backlog
+  epicId      String?       @map("epic_id")
+  issueKey    String        @unique @map("issue_key") // Ví dụ: "DA01-12"
+  issueNumber Int           @map("issue_number")
+  title       String
+  description String?       @db.Text
+  type        IssueType     @default(TASK)
+  status      IssueStatus   @default(TODO)
+  priority    IssuePriority @default(MEDIUM)
+  storyPoints Int           @default(1) @map("story_points")
+  position    Float         @default(1024.0) // Vị trí sắp xếp kéo thả trên cột Kanban
+
+  assigneeId  String?       @map("assignee_id")
+  reporterId  String        @map("reporter_id")
+  dueDate     DateTime?     @map("due_date")
+  completedAt DateTime?     @map("completed_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint      Sprint?           @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  epic        Epic?             @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  assignee    User?             @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reporter    User              @relation("IssueReporter", fields: [reporterId], references: [id])
+  subtasks    Subtask[]
+  comments    IssueComment[]
+  attachments IssueAttachment[]
+  activityLogs ActivityLog[]
+
+  @@index([projectId, sprintId, status, position])
+  @@map("issues")
+}
+
+model Subtask {
+  id          String  @id @default(uuid())
+  issueId     String  @map("issue_id")
+  title       String
+  isCompleted Boolean @default(false) @map("is_completed")
+  position    Int     @default(0)
+
+  issue       Issue   @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@map("subtasks")
+}
+
+model IssueComment {
+  id        String   @id @default(uuid())
+  issueId   String   @map("issue_id")
+  userId    String   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("issue_comments")
+}
+
+model IssueAttachment {
+  id         String   @id @default(uuid())
+  issueId    String   @map("issue_id")
+  uploadedBy String   @map("uploaded_by")
+  fileName   String   @map("file_name")
+  fileUrl    String   @map("file_url")
+  fileType   String?  @map("file_type")
+  fileSize   Int?     @map("file_size")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  uploader   User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("issue_attachments")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  projectId  String   @map("project_id")
+  issueId    String?  @map("issue_id")
+  actorId    String   @map("actor_id")
+  actionType String   @map("action_type") // VD: "STATUS_CHANGED", "ASSIGNEE_CHANGED", "MILESTONE_SUBMITTED"
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issue      Issue?   @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+// ==========================================
+// 3. ACADEMIC MODULES (Đặc thù cho Sinh viên & Giảng viên)
+// ==========================================
+
+model Milestone {
+  id              String          @id @default(uuid())
+  projectId       String          @map("project_id")
+  sprintId        String?         @map("sprint_id")
+  weekNumber      Int             @map("week_number") // Tuần 1 -> Tuần 9
+  title           String          // VD: "Báo cáo Tuần 1: Phân tích yêu cầu & ERD"
+  description     String?         @db.Text
+  submissionUrl   String?         @map("submission_url") // Link Google Docs / GitHub / File PDF
+  submissionNote  String?         @db.Text @map("submission_note")
+  status          MilestoneStatus @default(PENDING)
+  advisorFeedback String?         @db.Text @map("advisor_feedback")
+  advisorGrade    Float?          @map("advisor_grade") // Điểm quá trình thang 10
+  dueDate         DateTime        @map("due_date")
+  submittedAt     DateTime?       @map("submitted_at")
+  reviewedAt      DateTime?       @map("reviewed_at")
+
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint          Sprint?         @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, weekNumber])
+  @@map("milestones")
+}
+
+model PeerEvaluation {
+  id                  String   @id @default(uuid())
+  projectId           String   @map("project_id")
+  sprintId            String   @map("sprint_id")
+  reviewerId          String   @map("reviewer_id") // Người chấm
+  revieweeId          String   @map("reviewee_id") // Đồng đội được chấm
+  responsibilityScore Int      @map("responsibility_score") // Điểm trách nhiệm (1 - 5)
+  qualityScore        Int      @map("quality_score")        // Điểm chất lượng công việc (1 - 5)
+  teamworkScore       Int      @map("teamwork_score")       // Điểm thái độ phối hợp (1 - 5)
+  comment             String?  @db.Text
+  isAnonymous         Boolean  @default(true) @map("is_anonymous")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint              Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  reviewer            User     @relation("EvaluationReviewer", fields: [reviewerId], references: [id])
+  reviewee            User     @relation("EvaluationReviewee", fields: [revieweeId], references: [id])
+
+  @@unique([sprintId, reviewerId, revieweeId])
+  @@map("peer_evaluations")
+}
