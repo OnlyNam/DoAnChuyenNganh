@@ -6,6 +6,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import authRoutes from './routes/auth.routes';
 import projectRoutes from './routes/project.routes';
 import epicRoutes from './routes/epic.routes';
+import sprintRoutes from './routes/sprint.routes';
 import issueRoutes from './routes/issue.routes';
 import milestoneRoutes from './routes/milestone.routes';
 
@@ -29,7 +30,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'OK',
     service:
-      'Student Software Project Management API (Week 3 - Backlog, Epics & Issue CRUD)',
+      'Student Software Project Management API (Week 4 - Sprint Lifecycle & Kanban Drag-and-Drop)',
     timestamp: new Date().toISOString(),
   });
 });
@@ -38,6 +39,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/epics', epicRoutes);
+app.use('/api/sprints', sprintRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/milestones', milestoneRoutes);
 
