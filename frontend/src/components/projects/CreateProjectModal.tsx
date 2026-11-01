@@ -5,6 +5,7 @@ import {
   MilestoneItem,
   ProjectTemplate,
   ProjectWorkspace,
+  SprintItem,
   UserProfile,
 } from '../../types/project.types';
 
@@ -71,6 +72,41 @@ export default function CreateProjectModal({
       },
     ];
 
+    const defaultSprints: SprintItem[] = [
+      {
+        id: `sp_${Date.now()}_1`,
+        name: 'Sprint 1: Khởi động, Phân tích thiết kế & Base System (Tuần 1-2)',
+        goal: 'Hoàn tất thiết kế ERD, Use Case và dựng xong khung xác thực + quản lý dự án.',
+        status: 'ACTIVE',
+        startDate: '2026-10-23',
+        endDate: '2026-11-06',
+      },
+      {
+        id: `sp_${Date.now()}_2`,
+        name: 'Sprint 2: Xây dựng Lõi Quản lý Agile - Backlog & Kanban (Tuần 3-5)',
+        goal: 'Hoàn thiện luồng Backlog, chạy Sprint, kéo thả Kanban và trao đổi real-time.',
+        status: 'PLANNED',
+        startDate: '2026-11-06',
+        endDate: '2026-11-27',
+      },
+      {
+        id: `sp_${Date.now()}_3`,
+        name: 'Sprint 3: Cổng Giảng viên, Đánh giá Đóng góp & Dashboard (Tuần 6-7)',
+        goal: 'Hoàn thiện tính năng duyệt tiến độ tuần, chống free-rider và biểu đồ thống kê.',
+        status: 'PLANNED',
+        startDate: '2026-11-27',
+        endDate: '2026-12-11',
+      },
+      {
+        id: `sp_${Date.now()}_4`,
+        name: 'Sprint 4: Kiểm thử, Triển khai Cloud & Hoàn thiện Báo cáo (Tuần 8-9)',
+        goal: 'Đóng gói sản phẩm không lỗi, tạo dữ liệu mẫu và hoàn thành cuốn báo cáo đồ án.',
+        status: 'PLANNED',
+        startDate: '2026-12-11',
+        endDate: '2026-12-25',
+      },
+    ];
+
     const generatedMilestones: MilestoneItem[] =
       templateType === 'CAPSTONE_9W'
         ? DEFAULT_9W_TITLES.map((title, idx) => {
@@ -112,9 +148,7 @@ export default function CreateProjectModal({
           semester: apiProj.semester,
           templateType: apiProj.templateType,
           advisorName,
-          currentSprintName:
-            apiProj.sprints?.[0]?.name ||
-            'Sprint 1 - Phân tích thiết kế & Base System (Tuần 1-2)',
+          currentSprintName: defaultSprints[0].name,
           issueCounter: 1,
           members: [
             {
@@ -129,6 +163,7 @@ export default function CreateProjectModal({
             },
           ],
           epics: defaultEpics,
+          sprints: defaultSprints,
           issues: [],
           milestones:
             apiProj.milestones?.length > 0
@@ -147,7 +182,7 @@ export default function CreateProjectModal({
         return;
       }
     } catch {
-      // Fallback sang state cục bộ nếu chưa bật DB
+      // Fallback sang state cục bộ
     } finally {
       setLoading(false);
     }
@@ -160,8 +195,7 @@ export default function CreateProjectModal({
       semester,
       templateType,
       advisorName,
-      currentSprintName:
-        'Sprint 1: Khởi động, Phân tích thiết kế & Base System (Tuần 1-2)',
+      currentSprintName: defaultSprints[0].name,
       issueCounter: 1,
       members: [
         {
@@ -186,6 +220,7 @@ export default function CreateProjectModal({
         },
       ],
       epics: defaultEpics,
+      sprints: defaultSprints,
       issues: [
         {
           id: `iss_${Date.now()}`,
@@ -215,7 +250,7 @@ export default function CreateProjectModal({
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div>
             <span className="text-xs uppercase tracking-wider text-emerald-400 font-semibold">
-              Academic Project Template • Tuần 2 & 3
+              Academic Project Template
             </span>
             <h3 className="text-lg font-bold mt-0.5">
               Khởi Tạo Không Gian Dự Án Đồ Án Mới
@@ -324,8 +359,9 @@ export default function CreateProjectModal({
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800">
             <strong>Tự động hóa khi khởi tạo:</strong> Hệ thống sẽ gán bạn (
             <strong>{currentUser.fullName}</strong>) làm{' '}
-            <strong>Nhóm trưởng (LEADER)</strong>, tạo sẵn <strong>3 Epics</strong>{' '}
-            cùng <strong>9 Mốc báo cáo tuần (Milestones)</strong> chuẩn.
+            <strong>Nhóm trưởng (LEADER)</strong>, tạo sẵn <strong>3 Epics</strong>,{' '}
+            <strong>4 Sprints</strong> cùng{' '}
+            <strong>9 Mốc báo cáo tuần (Milestones)</strong> chuẩn.
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

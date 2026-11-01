@@ -1,6 +1,7 @@
 export type SystemRole = 'STUDENT' | 'LECTURER' | 'ADMIN';
 export type ProjectRole = 'LEADER' | 'MEMBER' | 'ADVISOR';
 export type ProjectTemplate = 'CAPSTONE_9W' | 'COURSE_15W' | 'SCRUM_BASIC';
+export type SprintStatus = 'PLANNED' | 'ACTIVE' | 'COMPLETED';
 
 export type IssueStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
 export type IssuePriority = 'LOWEST' | 'LOW' | 'MEDIUM' | 'HIGH' | 'HIGHEST';
@@ -40,6 +41,15 @@ export interface EpicItem {
   dueDate?: string;
 }
 
+export interface SprintItem {
+  id: string;
+  name: string;
+  goal: string;
+  status: SprintStatus;
+  startDate: string;
+  endDate: string;
+}
+
 export interface ProjectWorkspace {
   id: string;
   key: string;
@@ -52,6 +62,7 @@ export interface ProjectWorkspace {
   issueCounter: number;
   members: ProjectMemberItem[];
   epics: EpicItem[];
+  sprints: SprintItem[];
   issues: IssueItem[];
   milestones: MilestoneItem[];
 }
@@ -69,7 +80,7 @@ export interface IssueItem {
   assigneeName: string;
   studentCode: string;
   epicId?: string | null;
-  inBacklog?: boolean; // true = nằm trong Product Backlog, false/undefined = nằm trong Active Sprint
+  inBacklog?: boolean;
   dueDate?: string;
 }
 
