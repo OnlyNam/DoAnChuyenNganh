@@ -10,6 +10,7 @@ import {
   ProjectMemberItem,
   ProjectRole,
   ProjectWorkspace,
+  SprintItem,
   UserProfile,
 } from '../types/project.types';
 import AuthModal from '../components/auth/AuthModal';
@@ -17,6 +18,7 @@ import CreateProjectModal from '../components/projects/CreateProjectModal';
 import TeamMembersModal from '../components/projects/TeamMembersModal';
 import IssueFormModal from '../components/issues/IssueFormModal';
 import BacklogAndEpicsView from '../components/backlog/BacklogAndEpicsView';
+import SprintLifecycleModal from '../components/sprints/SprintLifecycleModal';
 
 const PRESET_ACCOUNTS: UserProfile[] = [
   {
@@ -124,6 +126,40 @@ const INITIAL_PROJECTS: ProjectWorkspace[] = [
         id: 'epic_3',
         title: 'Phân hệ 3: Lõi Agile - Backlog, Epics & Bảng Kanban',
         color: '#7C3AED',
+      },
+    ],
+    sprints: [
+      {
+        id: 'sp_1',
+        name: 'Sprint 1 - Phân tích thiết kế & Base System (Tuần 1-2)',
+        goal: 'Hoàn tất thiết kế ERD, Use Case và dựng xong khung xác thực + quản lý dự án.',
+        status: 'COMPLETED',
+        startDate: '2026-10-16',
+        endDate: '2026-10-29',
+      },
+      {
+        id: 'sp_2',
+        name: 'Sprint 2 - Quản lý Backlog, Epics & Kanban (Tuần 3-5)',
+        goal: 'Hoàn thiện luồng Backlog, chạy Sprint, kéo thả Kanban và trao đổi real-time.',
+        status: 'ACTIVE',
+        startDate: '2026-10-30',
+        endDate: '2026-11-15',
+      },
+      {
+        id: 'sp_3',
+        name: 'Sprint 3 - Cổng Giảng viên, Đánh giá Đóng góp & Dashboard (Tuần 6-7)',
+        goal: 'Hoàn thiện tính năng duyệt tiến độ tuần, chống free-rider và biểu đồ thống kê.',
+        status: 'PLANNED',
+        startDate: '2026-11-16',
+        endDate: '2026-11-30',
+      },
+      {
+        id: 'sp_4',
+        name: 'Sprint 4 - Kiểm thử, Triển khai Cloud & Hoàn thiện Báo cáo (Tuần 8-9)',
+        goal: 'Đóng gói sản phẩm không lỗi, tạo dữ liệu mẫu và hoàn thành cuốn báo cáo đồ án.',
+        status: 'PLANNED',
+        startDate: '2026-12-01',
+        endDate: '2026-12-15',
       },
     ],
     issues: [
@@ -261,7 +297,7 @@ const INITIAL_PROJECTS: ProjectWorkspace[] = [
         title: 'Tuần 1: Phân tích yêu cầu, Use Case & Thiết kế CSDL (ERD)',
         description: 'Nộp đặc tả SRS rút gọn, sơ đồ Use Case, ERD và khung dự án.',
         status: 'APPROVED',
-        dueDate: '2026-10-30',
+        dueDate: '2026-10-23',
         submissionUrl: 'https://github.com/OnlyNam/DoAnChuyenNganh/tree/main/docs',
         advisorFeedback:
           'Sơ đồ ERD chặt chẽ, giải quyết tốt bài toán đánh giá đóng góp sinh viên. Duyệt!',
@@ -274,7 +310,7 @@ const INITIAL_PROJECTS: ProjectWorkspace[] = [
         description:
           'Hoàn thành cấu trúc Git, Database Migration, Auth RBAC 2 tầng & Quản lý thành viên nhóm.',
         status: 'APPROVED',
-        dueDate: '2026-11-06',
+        dueDate: '2026-10-28',
         submissionUrl: 'https://github.com/OnlyNam/DoAnChuyenNganh',
         advisorFeedback:
           'Đã hoàn thiện xác thực JWT và phân quyền RBAC 2 tầng rất tốt.',
@@ -286,8 +322,21 @@ const INITIAL_PROJECTS: ProjectWorkspace[] = [
         title: 'Tuần 3: Xây dựng Module Backlog, Epic & Quản lý Công việc (Issue CRUD)',
         description:
           'Hoàn thiện API và giao diện danh sách Backlog, Epics, bộ lọc đa tiêu chí và gán Story Points Fibonacci.',
+        status: 'APPROVED',
+        dueDate: '2026-10-29',
+        submissionUrl: 'https://github.com/OnlyNam/DoAnChuyenNganh',
+        advisorFeedback:
+          'Giao diện Backlog và phân loại Fibonacci Story Points đúng chuẩn Scrum.',
+        advisorGrade: 9.5,
+      },
+      {
+        id: 'm4',
+        weekNumber: 4,
+        title: 'Tuần 4: Quản lý Chu kỳ Sprint & Bảng Kanban Kéo-Thả (Drag & Drop)',
+        description:
+          'Bắt đầu/Kết thúc Sprint kèm luân chuyển task tồn đọng và kéo thả thẻ trên Kanban.',
         status: 'SUBMITTED',
-        dueDate: '2026-11-13',
+        dueDate: '2026-11-05',
         submissionUrl: 'https://github.com/OnlyNam/DoAnChuyenNganh',
       },
     ],
@@ -311,13 +360,22 @@ export default function StudentProjectManagementPage() {
     'KANBAN' | 'BACKLOG' | 'MILESTONES' | 'CONTRIBUTION'
   >('KANBAN');
 
-  // Modals của Tuần 2 & Tuần 3
+  // Modals của Tuần 2, 3 & 4
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isSprintModalOpen, setIsSprintModalOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<IssueItem | null>(null);
   const [defaultInBacklog, setDefaultInBacklog] = useState<boolean>(false);
+
+  // State Kéo-Thả Kanban & Bộ lọc nhanh trên Kanban (Tuần 4)
+  const [draggingIssueId, setDraggingIssueId] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<IssueStatus | null>(
+    null
+  );
+  const [onlyMyIssues, setOnlyMyIssues] = useState<boolean>(false);
+  const [kanbanEpicFilter, setKanbanEpicFilter] = useState<string>('ALL');
 
   // State chấm điểm trên Cổng Giảng Viên
   const [gradingMilestoneId, setGradingMilestoneId] = useState<string | null>(
@@ -331,6 +389,21 @@ export default function StudentProjectManagementPage() {
 
   // Các Issues thuộc Active Sprint (Hiển thị trên Kanban Board)
   const activeSprintIssues = currentProject.issues.filter((i) => !i.inBacklog);
+
+  // Áp dụng bộ lọc nhanh trên Bảng Kanban (Tuần 4)
+  const visibleKanbanIssues = activeSprintIssues.filter((i) => {
+    if (
+      onlyMyIssues &&
+      currentUser.studentCode &&
+      i.studentCode !== currentUser.studentCode
+    ) {
+      return false;
+    }
+    if (kanbanEpicFilter !== 'ALL' && i.epicId !== kanbanEpicFilter) {
+      return false;
+    }
+    return true;
+  });
 
   // Tính toán Điểm đóng góp tự động theo dữ liệu thực tế của dự án hiện tại
   const dynamicContributions: MemberContribution[] = useMemo(() => {
@@ -407,6 +480,92 @@ export default function StudentProjectManagementPage() {
               ),
             }
       )
+    );
+  };
+
+  // Xử lý thả thẻ công việc trên Bảng Kanban (Drag & Drop - Tuần 4)
+  const handleDropOnColumn = (targetStatus: IssueStatus) => {
+    if (!draggingIssueId) return;
+    handleStatusChange(draggingIssueId, targetStatus);
+    setDraggingIssueId(null);
+    setDragOverColumn(null);
+  };
+
+  // Xử lý Vòng đời Sprint (Tuần 4)
+  const handleCreateSprint = (sprintData: Omit<SprintItem, 'id'>) => {
+    const newSp: SprintItem = {
+      id: `sp_${Date.now()}`,
+      ...sprintData,
+    };
+    setProjects((prev) =>
+      prev.map((proj) =>
+        proj.id !== currentProject.id
+          ? proj
+          : { ...proj, sprints: [...proj.sprints, newSp] }
+      )
+    );
+  };
+
+  const handleStartSprint = (sprintId: string) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== currentProject.id) return proj;
+        const target = proj.sprints.find((s) => s.id === sprintId);
+        return {
+          ...proj,
+          currentSprintName: target ? target.name : proj.currentSprintName,
+          sprints: proj.sprints.map((s) =>
+            s.id === sprintId ? { ...s, status: 'ACTIVE' } : s
+          ),
+        };
+      })
+    );
+  };
+
+  const handleCompleteSprint = (
+    sprintId: string,
+    rolloverTarget: 'NEXT_SPRINT' | 'BACKLOG'
+  ) => {
+    setProjects((prev) =>
+      prev.map((proj) => {
+        if (proj.id !== currentProject.id) return proj;
+
+        const nextPlanned = proj.sprints.find(
+          (s) => s.status === 'PLANNED' && s.id !== sprintId
+        );
+
+        const updatedSprints: SprintItem[] = proj.sprints.map((s) => {
+          if (s.id === sprintId) return { ...s, status: 'COMPLETED' };
+          if (
+            rolloverTarget === 'NEXT_SPRINT' &&
+            nextPlanned &&
+            s.id === nextPlanned.id
+          ) {
+            return { ...s, status: 'ACTIVE' };
+          }
+          return s;
+        });
+
+        const updatedIssues = proj.issues.map((iss) => {
+          if (!iss.inBacklog && iss.status !== 'DONE') {
+            return {
+              ...iss,
+              inBacklog: rolloverTarget === 'BACKLOG',
+            };
+          }
+          return iss;
+        });
+
+        return {
+          ...proj,
+          currentSprintName:
+            rolloverTarget === 'NEXT_SPRINT' && nextPlanned
+              ? nextPlanned.name
+              : 'Chưa có Sprint đang chạy (Hãy bắt đầu Sprint mới)',
+          sprints: updatedSprints,
+          issues: updatedIssues,
+        };
+      })
     );
   };
 
@@ -652,7 +811,7 @@ export default function StudentProjectManagementPage() {
             }}
             className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-1.5 rounded-lg transition"
           >
-            ➕ Tạo Công Việc (Issue)
+            ➕ Tạo Công Việc
           </button>
         </div>
 
@@ -712,7 +871,7 @@ export default function StudentProjectManagementPage() {
           </p>
         </div>
 
-        {/* Navigation Tabs (4 Phân Hệ Chính) */}
+        {/* Navigation Tabs */}
         <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg border border-slate-200">
           <button
             onClick={() => setActiveTab('KANBAN')}
@@ -758,109 +917,178 @@ export default function StudentProjectManagementPage() {
       </header>
 
       <main className="max-w-7xl mx-auto">
-        {/* TAB 1: KANBAN BOARD (ACTIVE SPRINT) */}
+        {/* TAB 1: KANBAN BOARD KÉO-THẢ & QUẢN LÝ SPRINT (TUẦN 4) */}
         {activeTab === 'KANBAN' && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {COLUMNS.map((col) => {
-              const colIssues = activeSprintIssues.filter(
-                (i) => i.status === col.key
-              );
-              const totalPoints = colIssues.reduce(
-                (s, i) => s + i.storyPoints,
-                0
-              );
+          <div className="space-y-4">
+            {/* Thanh công cụ Kanban (Tuần 4) */}
+            <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="font-semibold text-slate-600">
+                  💡 Mẹo: Kéo và thả trực tiếp thẻ công việc giữa 4 cột bên dưới!
+                </span>
 
-              return (
-                <div
-                  key={col.key}
-                  className="bg-slate-100/80 border border-slate-200 rounded-xl p-3 flex flex-col min-h-[520px]"
+                <button
+                  type="button"
+                  onClick={() => setOnlyMyIssues(!onlyMyIssues)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold border transition ${
+                    onlyMyIssues
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                  }`}
                 >
-                  <div className="flex items-center justify-between px-2 py-1.5 mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                      {col.label} ({colIssues.length})
-                    </span>
-                    <span className="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
-                      {totalPoints} SP
-                    </span>
-                  </div>
+                  👤 Chỉ việc của tôi ({currentUser.fullName.split('(')[0].trim()})
+                </button>
 
-                  <div className="space-y-3 flex-1">
-                    {colIssues.map((issue) => {
-                      const epic = currentProject.epics.find(
-                        (e) => e.id === issue.epicId
-                      );
+                <select
+                  aria-label="Lọc theo Epic trên bảng Kanban"
+                  value={kanbanEpicFilter}
+                  onChange={(e) => setKanbanEpicFilter(e.target.value)}
+                  className="border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white font-medium"
+                >
+                  <option value="ALL">📌 Tất cả Epics</option>
+                  {currentProject.epics.map((ep) => (
+                    <option key={ep.id} value={ep.id}>
+                      📌 {ep.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                      return (
-                        <div
-                          key={issue.id}
-                          className="bg-white rounded-lg border border-slate-200 p-3.5 shadow-sm hover:border-blue-400 transition"
-                        >
-                          <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="font-mono font-semibold text-blue-600">
-                              {issue.issueKey}
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">
-                                {issue.storyPoints} SP
+              <button
+                type="button"
+                onClick={() => setIsSprintModalOpen(true)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-3.5 py-1.5 rounded-lg transition"
+              >
+                🏁 Quản lý / Kết thúc Sprint
+              </button>
+            </div>
+
+            {/* 4 Cột Kanban Hỗ Trợ Drag & Drop */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {COLUMNS.map((col) => {
+                const colIssues = visibleKanbanIssues.filter(
+                  (i) => i.status === col.key
+                );
+                const totalPoints = colIssues.reduce(
+                  (s, i) => s + i.storyPoints,
+                  0
+                );
+                const isDragOver = dragOverColumn === col.key;
+
+                return (
+                  <div
+                    key={col.key}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (dragOverColumn !== col.key) {
+                        setDragOverColumn(col.key);
+                      }
+                    }}
+                    onDragLeave={() => setDragOverColumn(null)}
+                    onDrop={() => handleDropOnColumn(col.key)}
+                    className={`rounded-xl p-3 flex flex-col min-h-[520px] border-2 transition ${
+                      isDragOver
+                        ? 'bg-blue-50/80 border-blue-500 border-dashed'
+                        : 'bg-slate-100/80 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between px-2 py-1.5 mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        {col.label} ({colIssues.length})
+                      </span>
+                      <span className="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                        {totalPoints} SP
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 flex-1">
+                      {colIssues.map((issue) => {
+                        const epic = currentProject.epics.find(
+                          (e) => e.id === issue.epicId
+                        );
+
+                        return (
+                          <div
+                            key={issue.id}
+                            draggable
+                            onDragStart={() => setDraggingIssueId(issue.id)}
+                            onDragEnd={() => {
+                              setDraggingIssueId(null);
+                              setDragOverColumn(null);
+                            }}
+                            className={`bg-white rounded-lg border border-slate-200 p-3.5 shadow-sm hover:border-blue-400 cursor-grab active:cursor-grabbing transition ${
+                              draggingIssueId === issue.id
+                                ? 'opacity-50 scale-95'
+                                : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                              <span className="font-mono font-semibold text-blue-600">
+                                {issue.issueKey}
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingIssue(issue);
-                                  setIsIssueModalOpen(true);
-                                }}
-                                className="text-slate-400 hover:text-blue-600"
-                                title="Chỉnh sửa công việc"
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">
+                                  {issue.storyPoints} SP
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingIssue(issue);
+                                    setIsIssueModalOpen(true);
+                                  }}
+                                  className="text-slate-400 hover:text-blue-600"
+                                  title="Chỉnh sửa công việc"
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                            </div>
+
+                            {epic && (
+                              <div className="mb-1.5">
+                                <span
+                                  style={{
+                                    backgroundColor: `${epic.color}18`,
+                                    color: epic.color,
+                                  }}
+                                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block"
+                                >
+                                  📌 {epic.title}
+                                </span>
+                              </div>
+                            )}
+
+                            <p className="text-sm font-medium text-slate-800 mb-3">
+                              {issue.title}
+                            </p>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
+                              <span>👤 {issue.assigneeName}</span>
+                              <select
+                                aria-label="Đổi trạng thái công việc"
+                                value={issue.status}
+                                onChange={(e) =>
+                                  handleStatusChange(
+                                    issue.id,
+                                    e.target.value as IssueStatus
+                                  )
+                                }
+                                className="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700"
                               >
-                                ✏️
-                              </button>
+                                <option value="TODO">To Do</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="IN_REVIEW">In Review</option>
+                                <option value="DONE">Done</option>
+                              </select>
                             </div>
                           </div>
-
-                          {epic && (
-                            <div className="mb-1.5">
-                              <span
-                                style={{
-                                  backgroundColor: `${epic.color}18`,
-                                  color: epic.color,
-                                }}
-                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block"
-                              >
-                                📌 {epic.title}
-                              </span>
-                            </div>
-                          )}
-
-                          <p className="text-sm font-medium text-slate-800 mb-3">
-                            {issue.title}
-                          </p>
-
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
-                            <span>👤 {issue.assigneeName}</span>
-                            <select
-                              aria-label="Đổi trạng thái công việc"
-                              value={issue.status}
-                              onChange={(e) =>
-                                handleStatusChange(
-                                  issue.id,
-                                  e.target.value as IssueStatus
-                                )
-                              }
-                              className="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700"
-                            >
-                              <option value="TODO">To Do</option>
-                              <option value="IN_PROGRESS">In Progress</option>
-                              <option value="IN_REVIEW">In Review</option>
-                              <option value="DONE">Done</option>
-                            </select>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -1119,7 +1347,7 @@ export default function StudentProjectManagementPage() {
         )}
       </main>
 
-      {/* Các Modal của Tuần 2 & Tuần 3 */}
+      {/* Các Modal của Tuần 2, 3 & 4 */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -1160,6 +1388,17 @@ export default function StudentProjectManagementPage() {
         editingIssue={editingIssue}
         defaultInBacklog={defaultInBacklog}
         onSaveIssue={handleSaveIssue}
+      />
+
+      <SprintLifecycleModal
+        isOpen={isSprintModalOpen}
+        onClose={() => setIsSprintModalOpen(false)}
+        currentUser={currentUser}
+        sprints={currentProject.sprints}
+        activeSprintIssues={activeSprintIssues}
+        onCreateSprint={handleCreateSprint}
+        onStartSprint={handleStartSprint}
+        onCompleteSprint={handleCompleteSprint}
       />
     </div>
   );
